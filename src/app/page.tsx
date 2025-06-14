@@ -243,14 +243,15 @@ function removeCreditCardPaymentPairs(
   return rows.filter((_, idx) => !filtered[idx]);
 }
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type BarChartData = { positive: number; negative: number };
+type BarChartTooltipPayload = { payload: BarChartData };
 function BarChartTooltip({
   active,
   payload,
   label,
 }: {
   active?: boolean;
-  payload?: any[];
+  payload?: BarChartTooltipPayload[];
   label?: string;
 }) {
   if (!active || !payload || !payload.length) return null;
@@ -277,6 +278,8 @@ function BarChartTooltip({
     </Card>
   );
 }
+
+type ColumnWithAccessorKey = { accessorKey?: string };
 
 export default function Home() {
   const [files, setFiles] = useState<File[]>([]);
@@ -383,67 +386,72 @@ export default function Home() {
   ]);
 
   // Table columns with sorting and resizing
-  const allColumns: ColumnDef<MergedRow>[] = [
-    {
-      accessorKey: "date",
-      header: () => "Date",
-      enableSorting: true,
-      enableResizing: true,
-      size: 160,
-      minSize: 100,
-      maxSize: 300,
-      cell: (info) => info.getValue(),
-    },
-    {
-      accessorKey: "description",
-      header: () => "Description",
-      enableSorting: true,
-      enableResizing: true,
-      size: 300,
-      minSize: 120,
-      maxSize: 400,
-      cell: (info) => (
-        <span className="block max-w-[400px] overflow-hidden text-ellipsis whitespace-nowrap">
-          {String(info.getValue())}
-        </span>
-      ),
-    },
-    {
-      accessorKey: "amount",
-      header: () => "Amount",
-      enableSorting: true,
-      enableResizing: true,
-      size: 120,
-      minSize: 80,
-      maxSize: 200,
-      cell: (info) => {
-        const value = parseFloat(info.getValue() as string);
-        const colorClass =
-          value > 0
-            ? "text-green-600 dark:text-green-400"
-            : value < 0
-            ? "text-red-600 dark:text-red-400"
-            : "";
-        return <span className={colorClass}>{String(info.getValue())}</span>;
+  const allColumns = useMemo<ColumnDef<MergedRow>[]>(
+    () => [
+      {
+        accessorKey: "date",
+        header: () => "Date",
+        enableSorting: true,
+        enableResizing: true,
+        size: 160,
+        minSize: 100,
+        maxSize: 300,
+        cell: (info) => info.getValue(),
       },
-    },
-    {
-      accessorKey: "source",
-      header: () => "Source",
-      enableSorting: true,
-      enableResizing: true,
-      size: 200,
-      minSize: 100,
-      maxSize: 400,
-      cell: (info) => info.getValue(),
-    },
-  ];
+      {
+        accessorKey: "description",
+        header: () => "Description",
+        enableSorting: true,
+        enableResizing: true,
+        size: 300,
+        minSize: 120,
+        maxSize: 400,
+        cell: (info) => (
+          <span className="block max-w-[400px] overflow-hidden text-ellipsis whitespace-nowrap">
+            {String(info.getValue())}
+          </span>
+        ),
+      },
+      {
+        accessorKey: "amount",
+        header: () => "Amount",
+        enableSorting: true,
+        enableResizing: true,
+        size: 120,
+        minSize: 80,
+        maxSize: 200,
+        cell: (info) => {
+          const value = parseFloat(info.getValue() as string);
+          const colorClass =
+            value > 0
+              ? "text-green-600 dark:text-green-400"
+              : value < 0
+              ? "text-red-600 dark:text-red-400"
+              : "";
+          return <span className={colorClass}>{String(info.getValue())}</span>;
+        },
+      },
+      {
+        accessorKey: "source",
+        header: () => "Source",
+        enableSorting: true,
+        enableResizing: true,
+        size: 200,
+        minSize: 100,
+        maxSize: 400,
+        cell: (info) => info.getValue(),
+      },
+    ],
+    []
+  );
 
   const visibleColumns = useMemo<ColumnDef<MergedRow>[]>(() => {
     if (searchColumns.length === 0) return allColumns;
-    return allColumns.filter((col) =>
-      searchColumns.includes((col.id ?? (col as any).accessorKey) as string)
-    );
+    return allColumns.filter((col) => {
+      const id = col.id as string | undefined;
+      const accessorKey = (col as ColumnWithAccessorKey).accessorKey;
+      return searchColumns.includes(id ?? accessorKey ?? "");
+    });
   }, [searchColumns, allColumns]);
 
   const table = useReactTable({
