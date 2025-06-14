@@ -16,7 +16,6 @@ import {
   getCoreRowModel,
   getSortedRowModel,
   getFilteredRowModel,
-  getPaginationRowModel,
   flexRender,
   ColumnDef,
   SortingState,
@@ -36,9 +35,7 @@ import {
   BarChart,
   Bar,
   XAxis,
-  YAxis,
   ResponsiveContainer,
-  Legend,
   Tooltip as RechartsTooltip,
 } from "recharts";
 import { Calendar as CalendarIcon } from "lucide-react";
@@ -50,18 +47,6 @@ import {
   TooltipContent,
 } from "@/components/ui/tooltip";
 import { Info } from "lucide-react";
-import {
-  HoverCard,
-  HoverCardTrigger,
-  HoverCardContent,
-} from "@/components/ui/hover-card";
-import {
-  Select,
-  SelectTrigger,
-  SelectContent,
-  SelectItem,
-  SelectValue,
-} from "@/components/ui/select";
 import { Checkbox } from "@/components/ui/checkbox";
 import { ChevronDownIcon } from "lucide-react";
 
@@ -78,11 +63,6 @@ function parseDate(dateStr: string) {
   if (m && d && y)
     return new Date(`${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`);
   return new Date(dateStr);
-}
-
-function getMonthKey(dateStr: string) {
-  const d = parseDate(dateStr);
-  return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, "0")}`;
 }
 
 function getMonthShorts() {
@@ -104,17 +84,17 @@ function getMonthShorts() {
 
 function getBarChartData(rows: MergedRow[]) {
   const months = getMonthShorts();
-  const data = months.map((month, idx) => ({
+  const data = months.map((month) => ({
     month,
     positive: 0,
     negative: 0,
   }));
   rows.forEach((row) => {
     const d = parseDate(row.date);
-    const idx = d.getMonth();
+    const monthIdx = d.getMonth();
     const amt = parseFloat(row.amount);
-    if (amt > 0) data[idx].positive += amt;
-    if (amt < 0) data[idx].negative += amt;
+    if (amt > 0) data[monthIdx].positive += amt;
+    if (amt < 0) data[monthIdx].negative += amt;
   });
   return data;
 }
@@ -263,8 +243,16 @@ function removeCreditCardPaymentPairs(
   return rows.filter((_, idx) => !filtered[idx]);
 }
 
-// Custom tooltip for recharts
-function BarChartTooltip({ active, payload, label }: any) {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+function BarChartTooltip({
+  active,
+  payload,
+  label,
+}: {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}) {
   if (!active || !payload || !payload.length) return null;
   const data = payload[0].payload;
   return (
@@ -454,9 +442,9 @@ export default function Home() {
   const visibleColumns = useMemo<ColumnDef<MergedRow>[]>(() => {
     if (searchColumns.length === 0) return allColumns;
     return allColumns.filter((col) =>
-      searchColumns.includes(col.accessorKey as string)
+      searchColumns.includes((col.id ?? (col as any).accessorKey) as string)
     );
-  }, [searchColumns]);
+  }, [searchColumns, allColumns]);
 
   const table = useReactTable({
     data: filteredRows,
